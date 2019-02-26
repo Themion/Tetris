@@ -1,9 +1,8 @@
 import java.util.Scanner;
-import java.util.Random;
 
 public class GameBoard {
 	static boolean[][] board = new boolean[10][20];
-	static control ctrl = new control();
+	static control ctrl;
 	static control temp_ctrl;
 	static int score = 0;
 	
@@ -59,30 +58,37 @@ public class GameBoard {
 	}
 	//모두 차 있는 행을 비우는 함수
 	static void lineBreak() {
+		//라인을 부술지 내버려 둘지 정하는 변수
 		boolean noBreakLine;
 		
 		//맨 아래 라인부터 차례로 확인
 		for(int i = 19; i >= 0; i--){
+			//noBreakLine 초기화
 			noBreakLine = false;
 			
-			for(int j = 0; j < 10; j++){
-				if(!board[j][i]) noBreakLine = true;
-			}
+			//빈 칸이 하나라도 있다면 해당 라인을 부수지 않음
+			for(int j = 0; j < 10; j++) if(!board[j][i]) noBreakLine = true; 
 			
+			//nobreakLine이 true면 continue
 			if(noBreakLine) continue;
+			//nobreakLine이 false면
 			else {
-				for(int j = i; j > 0; j--)
-				{
+				//해당 라인 위의 모든 블럭을 한 칸 아래로 내린다
+				for(int j = i; j > 0; j--) {
 					for(int k = 0; k < 10; k++) {
 						board[k][j] = board[k][j - 1];
 					}
 				}
 				
+				//맨 위 라인을 전부 false로 채운다
 				for(int k = 0; k < 10; k++) {
 					board[k][0] = false;
 				}
 				
+				//점수에 1점 가점
 				score += 1;
+				//해당 라인을 재탐색하기 위해 i에 1 추가
+				i += 1;
 			}
 		}
 	}
@@ -95,8 +101,7 @@ public class GameBoard {
 		System.out.println("Q : 블럭 반시계방향 회전");
 		System.out.println("E : 블럭 시계방향 회전");
 		
-		Random rd = new Random();
-		ctrl = new control(rd.nextInt(5));
+		ctrl = new control();
 		
 		int res = check(ctrl);
 		char order = 'S';
@@ -181,6 +186,7 @@ public class GameBoard {
 			}
 		} while(res >= 0);
 		
+		//게임이 종료되었을 경우 게임 오버 메세지와 점수 출력
 		System.out.println("Game Over!");
 		System.out.println("Your score: " + score);
 		
