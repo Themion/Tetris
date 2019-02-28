@@ -1,32 +1,45 @@
+import java.util.Collections;
 import java.util.Scanner;
+import java.util.Arrays;
 
-public class GameBoard {
+public class GameBoard extends Thread {
+	//현재 테트리스 게임판의 상태를 저장할 판
 	static boolean[][] board = new boolean[10][20];
+	//테트리스 판에서 조종하는 블럭
 	static control ctrl;
-	static control temp_ctrl;
+	//테트리스 게임 점수
 	static int score = 0;
+	//게임이 끝난 경우 true가 되는 변수. run에서 사용
+	boolean ifSet = false;
 	
 	//이미 블럭이 쌓인 자리는 ■, 현재 블럭이 있는 자리는 +, 빈 자리는 □로 표시
-	static void show(){
+	static void show() {
 		System.out.println("\n\n\n\n");
 		
-		temp_ctrl = new control(ctrl);
-		while(check(temp_ctrl) > 0) temp_ctrl.center[1] += 1;
+		//블럭이 놓일 자리를 보여줌
+		control shadow = new control(ctrl);
+		//블럭을 아래로 당겨준다
+		while(check(shadow) > 0) shadow.center[1] += 1;
 		
+		//모든 칸에 대해
 		for(int i = 0; i < 20; i++) {
 			for(int j = 0; j < 10; j++) {
+				//해당 칸이 이미 채워져 있다면 ■로 표시
 				if(board[j][i] == true) System.out.print("■");
 				
+				//해당 칸에 블록이 존재한다면 +로 표시
 				else if((ctrl.center[0] == j) && (ctrl.center[1] == i)) System.out.print("+");
 				else if((ctrl.state(0, 0) == j) && (ctrl.state(0, 1) == i)) System.out.print("+");
 				else if((ctrl.state(1, 0) == j) && (ctrl.state(1, 1) == i)) System.out.print("+");																		
 				else if((ctrl.state(2, 0) == j) && (ctrl.state(2, 1) == i)) System.out.print("+");
+
+				//해당 칸에 블록이 놓일 것이라면 -로 표시
+				else if((shadow.center[0] == j) && (shadow.center[1] == i)) System.out.print("-");
+				else if((shadow.state(0, 0) == j) && (shadow.state(0, 1) == i)) System.out.print("-");
+				else if((shadow.state(1, 0) == j) && (shadow.state(1, 1) == i)) System.out.print("-");																		
+				else if((shadow.state(2, 0) == j) && (shadow.state(2, 1) == i)) System.out.print("-");
 				
-				else if((temp_ctrl.center[0] == j) && (temp_ctrl.center[1] == i)) System.out.print("-");
-				else if((temp_ctrl.state(0, 0) == j) && (temp_ctrl.state(0, 1) == i)) System.out.print("-");
-				else if((temp_ctrl.state(1, 0) == j) && (temp_ctrl.state(1, 1) == i)) System.out.print("-");																		
-				else if((temp_ctrl.state(2, 0) == j) && (temp_ctrl.state(2, 1) == i)) System.out.print("-");
-				
+				//해당 칸이 비어있으면 □로 표시
 				else System.out.print("□");
 			}
 			
@@ -34,25 +47,25 @@ public class GameBoard {
 		}
 	}
 	//주어진 블럭이 있는 자리에 대한 정보를 -1. 0. 1로 반환
-	static int check(control cntrl) {
+	static int check(control ctrl) {
 		/* 리턴값은 -1, 0, 1 중 하나
 		 * 리턴값이 -1일 경우 블럭과 기존 board가 겹침 or 에러 발생.
 		 * 리턴값이  0일 경우 블럭의 바로 아래에 기존 board가 존재함. 하강 불가능
 		 * 그 이외의 경우는 전부 리턴값이 1
 		 * */
 		
-		if(!cntrl.isValid()) return -1;
+		if(!ctrl.isValid()) return -1;
 		
 		for(int i = 0; i < 3; i++) {
-			if(board[cntrl.state(i, 0)][cntrl.state(i, 1)]) return -1;
+			if(board[ctrl.state(i, 0)][ctrl.state(i, 1)]) return -1;
 		}
 
 		for(int i = 0; i < 3; i++) {
-			if(cntrl.state(i, 1) > 18) return 0;
-			if(board[cntrl.state(i, 0)][cntrl.state(i, 1) + 1]) return 0;
+			if(ctrl.state(i, 1) > 18) return 0;
+			if(board[ctrl.state(i, 0)][ctrl.state(i, 1) + 1]) return 0;
 		}
 		
-		if((cntrl.center[1] <= 18) && (board[cntrl.center[0]][cntrl.center[1] + 1])) return 0;
+		if((ctrl.center[1] <= 18) && (board[ctrl.center[0]][ctrl.center[1] + 1])) return 0;
 		
 		return 1;
 	}
@@ -92,24 +105,62 @@ public class GameBoard {
 			}
 		}
 	}
+	//블록을 1초에 한 번씩 한 칸 아래로
+	@Override
+	public void run() {
+		//게임 시작 시간을 저장
+		long curTime = System.currentTimeMillis();
+		//score에 따라 난이도를 높이기 위한 변수
+		int timeLimit;
+		
+		//게임이 끝나지 않은 경우
+		while(!ifSet) {
+			//난이도를 설정한 다음
+			timeLimit = 1000 - score;
+			//매 클럭마다
+			if(System.currentTimeMillis() - curTime >= timeLimit) {
+				//블럭을 한 칸 아래로 내린 뒤
+				ctrl.center[1] += 1;
+				//현재 상태를 출력
+				show();
+				//curTime을 갱신
+				curTime = System.currentTimeMillis();
+			}
+		}
+	}
 	
-	public static void main(String[] args) {
+	//실질적 main 함수
+	void go() {
 		System.out.println("W : 블럭 맨 아래로");
 		System.out.println("A : 블럭 한 칸 왼쪽으로");
 		System.out.println("S : 블럭 한 칸 오른쪽으로");
 		System.out.println("D : 블럭 한 칸 아래로");
 		System.out.println("Q : 블럭 반시계방향 회전");
 		System.out.println("E : 블럭 시계방향 회전");
-		
-		ctrl = new control();
-		
-		int res = check(ctrl);
-		char order = 'S';
-		String input;
-		boolean ifW = false;
-		Scanner scan = new Scanner(System.in);
 
+		//모든 종류의 블럭을 한 덩어리로 묶어 균등하게 나오도록 함
+		int round[] = {0, 1, 2, 3, 4, 5, 6};
+		//round의 인덱스로 쓸 변수
+		int target = 0;
+		
+		//round를 셔플한다
+		Collections.shuffle(Arrays.asList(round));
+		//ctrl에 새 블럭을 지정
+		ctrl = new control(round[target]);
+		
+		//ctrl의 현 상태를 나타내는 변수
+		int res;
+		//ctrl에 내릴 명령을 저장
+		char order = 'S';
+		//order 변수에 값을 넘겨주기 위한 더미 변수
+		String input;
+		//W 커맨드를 입력했을 때 사용할 boolean 변수
+		boolean ifW = false;
+		
+		Scanner scan = new Scanner(System.in);
+		
 		do {
+			//현재 ctrl의 상태에 따라 할 행동을 정한다
 			res = check(ctrl);
 			
 			//바닥에 닿으면 board에 기존 블럭을 추가한 뒤 새 블럭으로 게임 플레이
@@ -118,11 +169,24 @@ public class GameBoard {
 				board[ctrl.center[0]][ctrl.center[1]] = true;
 				//블럭의 나머지 조각들 또한 board에 추가한다
 				for(int i = 0; i < 3; i++) board[ctrl.state(i, 0)][ctrl.state(i, 1)] = true;
-				ifW = false;
-				show();
-				lineBreak();
 				
-				ctrl = new control();
+				///target이 6이라면 round를 다시 셔플하고 target을 0으로 지정
+				if(target == 6) {
+					Collections.shuffle(Arrays.asList(round));
+					target = 0;
+				}
+				
+				//target이 0부터 5 사이라면 target에 1을 더함
+				else target += 1;
+				
+				//ifW 초기화
+				ifW = false;
+				//차 있는 블록 제거
+				lineBreak();
+				//현재 board 상태 출력
+				show();
+				
+				ctrl = new control(target);
 			}
 			
 			else if(res == 1) {
@@ -134,7 +198,7 @@ public class GameBoard {
 					//input의 맨 앞자리를 커맨드로 사용
 					order = input.charAt(0);
 					
-					//디버깅용 강제종료
+					//디버깅 강제종료
 					if(input == "Quit") break;
 
 					//소문자일 경우 대문자로 변경
@@ -146,9 +210,11 @@ public class GameBoard {
 				//전에 W키를 입력했다면 커맨드를 S로 고정
 				else order = 'S';
 				
+				//order값에 따라 블록 조작
 				switch(order) {
 					case('W'):
-						ifW = true;
+						while(check(ctrl) > 0) ctrl.center[1] += 1;
+						break;
 					
 					case('S'):
 						//블럭의 중심을 한 칸 아래로 이동
@@ -185,6 +251,8 @@ public class GameBoard {
 				}
 			}
 		} while(res >= 0);
+		
+		ifSet = true;
 		
 		//게임이 종료되었을 경우 게임 오버 메세지와 점수 출력
 		System.out.println("Game Over!");
